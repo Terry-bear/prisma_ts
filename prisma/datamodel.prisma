@@ -1,0 +1,87 @@
+# 账号(含主账号+子账号)
+type Account {
+  id: ID! @unique                                                                # 账号标识--对应kong中的consumers,且username={id}
+  userName: String! @unique                                                      # 用户名(在手机号注册等场景，可能随机生成一个,后续允许修改一次)--所以不能对应kong中的consumers的username字段
+  email: String @unique                                                          # 电子邮箱
+  mobileNo: String                                                               # 手机号码
+  idCard: String @unique                                                         # 身份证
+  name: String                                                                   # 姓名
+  headpic: String                                                                # 头像
+  password: String!                                                              # 密码(子账号默认初始化一个随机密码)
+  resetPasswordNext: Boolean! @default(value: "false")                           # 用户在下次登录时必须重置密码
+  enable: Boolean! @default(value: "true")                                       # 是否启用
+  parentAccount:Account @relation(name: "SubAccount")                            # 归属父账户(为null代表是主账号)
+  subAccount: [Account!] @relation(name: "SubAccount" onDelete: CASCADE)         # 下挂子账户(为null代表没有子账户,从列表删除子账户时,同时删除对应的账户)
+  accessKeys: [AccessKey!] @relation(name: "AccessKeyByUser" onDelete: CASCADE)  # 访问秘钥对
+  groups: [Group!] @relation(name: "AccountToGroup")                             # 加入的组
+  permissions:[Permission!]                                                      # 引用的权限
+  lastLoginAt: DateTime                                                          # 最后登录时间
+  updatedAt: DateTime!                                                           # 更新时间
+  createdAt: DateTime!                                                           # 创建时间
+}
+
+# Jwt非对称凭证密钥(对应kong中jwt插件凭证,见https://docs.konghq.com/hub/kong-inc/jwt/)
+type JwtRsa {
+  id: ID! @unique       # 凭证标识--对应kong的/consumers/{consumer}/jwt操作,且key={id}
+  publicKey: String     # 公钥--对应kong中的/consumers/{consumer}/jwt操作,且rsa_public_key={publicKey}
+  privateKey: String    # 私钥
+  updatedAt: DateTime!  # 更新时间
+  createdAt: DateTime!  # 创建时间
+}
+
+# 访问秘钥
+type AccessKey {
+  id: ID! @unique                                         # 访问标识
+  secret: String @unique                                  # 访问秘钥--去kong注册/consumers/{consumer}/key-auth/时key必须是此值
+  activated: Boolean! @default(value: "true")             # 激活/禁用
+  account: Account! @relation(name: "AccessKeyByUser")    # 访问秘钥归属的账号 
+  updatedAt: DateTime!                                    # 更新时间
+  createdAt: DateTime!                                    # 创建时间
+}
+
+# RAM角色(业务服务通过扮演RAM角色实现相互在后台调用--对应kong实现,见https://docs.konghq.com/1.0.x/getting-started/adding-consumers/)
+type ServiceRole {
+  tenantIdServiceName: String! @unique    # 拼接的角色名称(拼接方式tenantId:ServiceName)--对应kong中的consumers,且username={tenantIdServiceName}
+  keyAuthSecret: String! @unique          # key-auth插件的秘钥--对应kong中/consumers/{tenantIdServiceName}/key-auth/,且key={keyAuthSecret}
+  permissions:[Permission!]               # 引用的权限
+  updatedAt: DateTime!                    # 更新时间
+  createdAt: DateTime!                    # 创建时间
+}
+
+# 权限策略(对应kong中的SF,见https://docs.konghq.com/hub/kong-inc/serverless-functions/)
+type Permission {
+  name: String! @unique
+  remark: String!
+  type: PermissionType                    # 类型(系统策略|自定义策略)
+  usedCount: Int! @default(value: "0")    # 被引用次数(不为0，则不允许删除)
+  currentVersion: Int!                    # 当前版本编号
+  version1Content: String                 # 版本一的权限内容--通过权限模型对应(或直接等于)kong中的SF
+  version2Content: String                 # 版本二的权限内容--通过权限模型对应(或直接等于)kong中的SF
+  version3Content: String                 # 版本三的权限内容--通过权限模型对应(或直接等于)kong中的SF
+  version4Content: String                 # 版本四的权限内容--通过权限模型对应(或直接等于)kong中的SF
+  version5Content: String                 # 版本五的权限内容--通过权限模型对应(或直接等于)kong中的SF
+  updatedAt: DateTime!                    # 更新时间
+  createdAt: DateTime!                    # 创建时间
+}
+
+# 权限策略类型
+enum PermissionType {
+  SYSTEM,  # 系统策略 (运维预置:不允个人许编辑)
+  CUSTOM   # 自定义策略
+}
+
+# 承载用户组和业务组
+type Group {
+  id: ID! @unique                                         # 组标识
+  type: GroupType                                         # 类型(用户组|业务组)
+  accounts: [Account!] @relation(name: "AccountToGroup")  # 该组下挂的账号
+  permissions:[Permission!]                               # 引用的权限
+  updatedAt: DateTime!                                    # 更新时间
+  createdAt: DateTime!                                    # 创建时间
+}
+
+# 权限策略类型
+enum GroupType {
+  USERGROUP,      # 用户组
+  BUSINESSGROUP   # 业务组(运维预置:个人不可见，也不可编辑)
+}

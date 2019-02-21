@@ -1,0 +1,30 @@
+{
+  "name": "auth",
+  "version": "1.0.0",
+  "description": "先 https://nodejs.org/dist/v8.9.4/ 下载对应系统的node包解压并配置用户环境变量",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node-dev --no-notify --respawn --transpileOnly ./src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@code.aliyun.com:kpg/auth.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "graphql": "^14.1.1",
+    "graphql-yoga": "^1.17.4",
+    "nexus": "^0.9.13",
+    "nexus-prisma": "^0.3.1",
+    "prisma-client-lib": "^1.26.6"
+  },
+  "devDependencies": {
+    "@types/graphql": "^14.0.7",
+    "@types/node": "^11.9.4",
+    "@types/ws": "^6.0.1",
+    "ts-node-dev": "^1.0.0-pre.32",
+    "typescript": "^3.3.3"
+  }
+}
